@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FoodBridge — Zero Waste, Full Plates</title>
+    <meta name="description" content="Premium food waste management connecting restaurants with NGOs" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                        accent: { 50: '#fff7ed', 100: '#ffedd5', 400: '#fb923c', 500: '#f97316', 600: '#ea580c' },
+                        slate: { 750: '#293548', 850: '#172033' }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn .4s ease-out',
+                        'slide-up': 'slideUp .4s ease-out',
+                        'slide-right': 'slideRight .3s ease-out',
+                        'pulse-dot': 'pulseDot 2s infinite',
+                        'count': 'count 1s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+                        slideUp: { '0%': { opacity: 0, transform: 'translateY(16px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+                        slideRight: { '0%': { opacity: 0, transform: 'translateX(-12px)' }, '100%': { opacity: 1, transform: 'translateX(0)' } },
+                        pulseDot: { '0%,100%': { opacity: 1 }, '50%': { opacity: .4 } },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <!-- Leaflet Marker Clustering -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.min.js"></script>
+    <style>
+        #foodbridgeMap { height: 500px; border-radius: 1.5rem; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+        .leaflet-container { font-family: inherit; }
+        .leaflet-popup-content { font-size: 14px; }
+        .marker-restaurant { background-color: #10b981; }
+        .marker-ngo { background-color: #3b82f6; }
+        .marker-delivery { background-color: #f97316; }
+    </style>
+</head>
+
+<body class="font-sans text-gray-800 antialiased">
+
+    <!-- ===================== LANDING PAGE ===================== -->
+    <div id="landingPage" class="relative">
+        <!-- Landing Navbar -->
+        <nav class="fixed top-0 left-0 right-0 z-[60] transition-all duration-500" id="landingNav">
+            <div class="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-10 h-20">
+                <div class="flex items-center gap-3">
+                    <img src="images/logo.svg" alt="FoodBridge" class="w-10 h-10 rounded-xl object-cover"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                    <div
+                        class="w-10 h-10 rounded-xl bg-brand-500 items-center justify-center text-white text-xl hidden">
+                        🍽️</div>
+                    <span class="text-xl font-extrabold text-white tracking-tight">FoodBridge</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#hero" class="text-white/80 hover:text-white text-sm font-medium transition">Home</a>
+                    <a href="#how-it-works" class="text-white/80 hover:text-white text-sm font-medium transition">How It
+                        Works</a>
+                    <a href="#impact" class="text-white/80 hover:text-white text-sm font-medium transition">Impact</a>
+                    <a href="#scenes" class="text-white/80 hover:text-white text-sm font-medium transition">Gallery</a>
+                </div>
+                <button id="enterDashboardBtn" aria-expanded="false"
+                    class="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all duration-300 min-h-[40px]">
+                    Enter Dashboard →
+                </button>
+            </div>
+        </nav>
+
+        <!-- HERO SECTION -->
+        <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+            <!-- Parallax Background -->
+            <div class="absolute inset-0 z-0">
+                <img src="images/hero.svg" alt="Fresh food spread"
+                    class="w-full h-full object-cover scale-110 parallax-bg" loading="lazy"
+                    onerror="this.parentElement.classList.add('bg-gradient-to-br','from-slate-900','via-brand-900','to-slate-800')" />
+                <div class="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-slate-900/90"></div>
+            </div>
+
+            <!-- Hero Content -->
+            <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
+                <div class="scroll-reveal">
+                    <span
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-500/20 border border-brand-400/30 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-6">
+                        <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span> Reducing Food Waste Across
+                        India
+                    </span>
+                </div>
+                <h1 class="scroll-reveal text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6"
+                    style="animation-delay:.1s">
+                    Zero Waste.<br />
+                    <span class="bg-gradient-to-r from-brand-300 to-brand-500 bg-clip-text text-transparent">Full
+                        Plates.</span>
+                </h1>
+                <p class="scroll-reveal text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10"
+                    style="animation-delay:.2s">
+                    Connecting restaurants with NGOs to ensure surplus food reaches those who need it most — not
+                    landfills.
+                </p>
+                <div class="scroll-reveal flex flex-col sm:flex-row gap-4 justify-center" style="animation-delay:.3s">
+                    <button id="heroDashboardBtn" aria-expanded="false"
+                        class="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-bold text-base sm:text-lg hover:shadow-2xl hover:shadow-brand-500/30 hover:-translate-y-1 active:scale-[.98] transition-all duration-300 min-h-[44px]">
+                        Enter Dashboard →
+                    </button>
+                    <a href="#how-it-works"
+                        class="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all duration-300 min-h-[44px] flex items-center justify-center">
+                        See How It Works
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scroll Indicator -->
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+                <span class="text-white/40 text-xs uppercase tracking-widest">Scroll</span>
+                <div class="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center p-1.5">
+                    <div class="w-1.5 h-3 rounded-full bg-white/60 animate-bounce"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- HOW IT WORKS -->
+        <section id="how-it-works" class="relative py-20 sm:py-28 px-4 sm:px-6 bg-white overflow-hidden">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-12 sm:mb-20">
+                    <p class="scroll-reveal text-brand-600 text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">The Process
+                    </p>
+                    <h2 class="scroll-reveal text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900">How FoodBridge Works
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                    <div class="scroll-reveal text-center group">
+                        <div
+                            class="w-16 sm:w-20 h-16 sm:h-20 mx-auto rounded-2xl bg-brand-50 flex items-center justify-center text-3xl sm:text-4xl mb-4 sm:mb-6 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-brand-100 transition-all duration-500">
+                            🍲</div>
+                        <div class="w-12 h-1 rounded-full bg-brand-500 mx-auto mb-3 sm:mb-4"></div>
+                        <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Restaurant Lists Food</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Restaurants post surplus food with quantity,
+                            pickup-by time, and category. Takes less than 30 seconds.</p>
+                    </div>
+                    <div class="scroll-reveal text-center group" style="animation-delay:.15s">
+                        <div
+                            class="w-16 sm:w-20 h-16 sm:h-20 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center text-3xl sm:text-4xl mb-4 sm:mb-6 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-blue-100 transition-all duration-500">
+                            🤝</div>
+                        <div class="w-12 h-1 rounded-full bg-blue-500 mx-auto mb-3 sm:mb-4"></div>
+                        <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">NGO Requests Food</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Verified NGOs browse available food, filter by
+                            location and type, and request what they need.</p>
+                    </div>
+                    <div class="scroll-reveal text-center group" style="animation-delay:.3s">
+                        <div
+                            class="w-16 sm:w-20 h-16 sm:h-20 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center text-3xl sm:text-4xl mb-4 sm:mb-6 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-amber-100 transition-all duration-500">
+                            🚚</div>
+                        <div class="w-12 h-1 rounded-full bg-amber-500 mx-auto mb-3 sm:mb-4"></div>
+                        <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Food Gets Delivered</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">Admin approves, delivery is tracked in
+                            real-time. Food reaches people who need it most.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- IMPACT STATS -->
+        <section id="impact" class="relative py-20 sm:py-28 px-4 sm:px-6 bg-slate-900 overflow-hidden">
+            <div class="absolute inset-0 opacity-10"
+                style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 40px 40px;">
+            </div>
+            <div class="max-w-6xl mx-auto relative z-10">
+                <div class="text-center mb-12 sm:mb-16">
+                    <p class="scroll-reveal text-brand-400 text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Our Impact
+                    </p>
+                    <h2 class="scroll-reveal text-3xl sm:text-4xl md:text-5xl font-extrabold text-white">Making a Real Difference
+                    </h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
+                    <div class="scroll-reveal text-center">
+                        <p class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-brand-400 landing-count" data-target="15000">
+                            0</p>
+                        <p class="text-white/50 text-xs sm:text-sm mt-2">Meals Saved</p>
+                    </div>
+                    <div class="scroll-reveal text-center" style="animation-delay:.1s">
+                        <p class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-blue-400 landing-count" data-target="120">0
+                        </p>
+                        <p class="text-white/50 text-xs sm:text-sm mt-2">Partner Restaurants</p>
+                    </div>
+                    <div class="scroll-reveal text-center" style="animation-delay:.2s">
+                        <p class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-amber-400 landing-count" data-target="45">0
+                        </p>
+                        <p class="text-white/50 text-xs sm:text-sm mt-2">NGOs Connected</p>
+                    </div>
+                    <div class="scroll-reveal text-center" style="animation-delay:.3s">
+                        <p class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-red-400 landing-count" data-target="8500">0
+                        </p>
+                        <p class="text-white/50 text-xs sm:text-sm mt-2">kg CO₂ Prevented</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE GALLERY with Parallax Cards -->
+        <section id="scenes" class="relative py-20 sm:py-28 px-4 sm:px-6 bg-gray-50 overflow-hidden">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-12 sm:mb-16">
+                    <p class="scroll-reveal text-brand-600 text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">In Action
+                    </p>
+                    <h2 class="scroll-reveal text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900">See the Journey</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                    <div
+                        class="scroll-reveal scene-card group relative rounded-3xl overflow-hidden h-[420px] cursor-pointer">
+                        <img src="images/hero.svg" alt="Food preparation"
+                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy"
+                            onerror="this.parentElement.classList.add('bg-gradient-to-br','from-brand-500','to-brand-700')" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                        <div
+                            class="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <span class="text-brand-300 text-xs font-bold uppercase tracking-wider">Step 1</span>
+                            <h3 class="text-2xl font-bold text-white mt-2">Restaurants Prepare</h3>
+                            <p
+                                class="text-white/60 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                Surplus food is identified and listed on the platform within minutes.</p>
+                        </div>
+                    </div>
+                    <div class="scroll-reveal scene-card group relative rounded-3xl overflow-hidden h-[420px] cursor-pointer"
+                        style="animation-delay:.15s">
+                        <img src="images/ngo.svg" alt="NGO distribution"
+                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy"
+                            onerror="this.parentElement.classList.add('bg-gradient-to-br','from-blue-500','to-blue-700')" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                        <div
+                            class="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <span class="text-blue-300 text-xs font-bold uppercase tracking-wider">Step 2</span>
+                            <h3 class="text-2xl font-bold text-white mt-2">NGOs Collect</h3>
+                            <p
+                                class="text-white/60 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                Verified NGOs pick up food and distribute it to communities in need.</p>
+                        </div>
+                    </div>
+                    <div class="scroll-reveal scene-card group relative rounded-3xl overflow-hidden h-[420px] cursor-pointer"
+                        style="animation-delay:.3s">
+                        <img src="images/delivery.svg" alt="Delivery"
+                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy"
+                            onerror="this.parentElement.classList.add('bg-gradient-to-br','from-amber-500','to-amber-700')" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                        <div
+                            class="absolute bottom-0 left-0 right-0 p-8 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <span class="text-amber-300 text-xs font-bold uppercase tracking-wider">Step 3</span>
+                            <h3 class="text-2xl font-bold text-white mt-2">Food Delivered</h3>
+                            <p
+                                class="text-white/60 text-sm mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                Real-time tracking ensures food reaches its destination fresh and on time.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="relative py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-br from-brand-600 to-brand-800 overflow-hidden">
+            <div
+                class="absolute top-0 right-0 w-96 h-96 bg-brand-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2">
+            </div>
+            <div class="max-w-3xl mx-auto text-center relative z-10">
+                <h2 class="scroll-reveal text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-4 sm:mb-6">Ready to Make an Impact?
+                </h2>
+                <p class="scroll-reveal text-brand-100/70 text-base sm:text-lg mb-8 sm:mb-10">Join the FoodBridge network and help eliminate
+                    food waste in your city.</p>
+                <button id="ctaDashboardBtn" aria-expanded="false"
+                    class="scroll-reveal px-8 sm:px-10 py-3 sm:py-4 rounded-2xl bg-white text-brand-700 font-bold text-base sm:text-lg hover:shadow-2xl hover:-translate-y-1 active:scale-[.98] transition-all duration-300 min-h-[44px] w-full sm:w-auto">
+                    Enter Dashboard →
+                </button>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-slate-900 py-10 px-6 text-center">
+            <p class="text-slate-500 text-sm">© 2026 FoodBridge. Built for DBMS Project. Made with ❤️</p>
+        </footer>
+    </div>
+
+    <!-- ===================== AUTH MODAL (Login / Register) ===================== -->
+    <div id="authModal" role="dialog" aria-modal="true" aria-hidden="true"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300 hidden">
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 max-h-[90vh] overflow-y-auto"
+            id="authModalInner" tabindex="-1">
+
+            <!-- Auth Header Tabs -->
+            <div class="flex border-b border-gray-100 sticky top-0 bg-white z-10">
+                <button id="tabLogin"
+                    class="flex-1 py-3 sm:py-4 text-sm font-bold text-brand-600 border-b-2 border-brand-500 transition-colors">Login</button>
+                <button id="tabRegister"
+                    class="flex-1 py-3 sm:py-4 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-800 transition-colors">Register</button>
+            </div>
+
+            <div class="p-6 sm:p-8">
+                <!-- Role Selector -->
+                <div class="flex gap-2 p-1 bg-gray-100 rounded-xl mb-6">
+                    <button
+                        class="auth-role-btn flex-1 py-3 rounded-lg bg-white shadow text-sm font-bold text-gray-900 transition-all min-h-[40px]"
+                        data-role="restaurant">🍽️ Restaurant</button>
+                    <button
+                        class="auth-role-btn flex-1 py-3 rounded-lg text-sm font-semibold text-gray-500 hover:text-gray-900 transition-all min-h-[40px]"
+                        data-role="ngo">🤝 NGO</button>
+                </div>
+
+                <form id="authForm" class="space-y-4">
+                    <!-- Register Only Fields -->
+                    <div id="registerFields" class="hidden space-y-4">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Organization
+                                Name</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3 text-gray-400">🏢</span>
+                                <input type="text" id="authName"
+                                    class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition"
+                                    placeholder="e.g. Hope Foundation">
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label
+                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                                    <span>Location</span>
+                                    <button type="button" onclick="openLocationPicker('auth')" class="text-brand-500 hover:text-brand-600 text-[10px] font-bold flex items-center gap-1">📍 Pick on Map</button>
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📍</span>
+                                    <input type="text" id="authLocation"
+                                        class="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition"
+                                        placeholder="City Area">
+                                    <input type="hidden" id="authLat">
+                                    <input type="hidden" id="authLon">
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <label
+                                    class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Contact
+                                    No.</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📞</span>
+                                    <input type="text" id="authContact"
+                                        class="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition"
+                                        placeholder="10 Digits">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Common Fields -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Email
+                            Address</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">✉️</span>
+                            <input type="email" id="authEmail" required
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition"
+                                placeholder="admin@organization.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
+                            <input type="password" id="authPassword" required
+                                class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition"
+                                placeholder="•••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="authSubmitBtn"
+                        class="w-full mt-6 py-3 rounded-xl bg-brand-500 text-white font-bold text-sm hover:bg-brand-600 active:scale-[.98] transition-all flex justify-center items-center gap-2 min-h-[44px]">
+                        <span>Log In Securely</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </form>
+
+                <p class="text-xs text-center text-gray-400 mt-6 pt-4 border-t border-gray-100">
+                    By logging in, you agree to our <a href="#" class="text-brand-500 hover:underline">Terms of
+                        Service</a> & <a href="#" class="text-brand-500 hover:underline">Privacy Policy</a>
+                </p>
+
+                <button id="closeAuthModal"
+                    class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex items-center justify-center transition-colors">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== DASHBOARD APP (hidden initially) ===================== -->
+    <div id="dashboardApp" class="hidden" aria-hidden="true">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar"
+            class="fixed top-0 left-0 w-[272px] h-screen bg-slate-900 flex flex-col z-50 transition-transform duration-300 max-md:-translate-x-full max-md:shadow-2xl">
+            <div class="p-6 pb-2 relative z-50">
+                <div class="flex items-center gap-3">
+                    <img src="images/logo.svg" alt="FoodBridge Logo"
+                        class="w-10 h-10 rounded-xl object-cover shadow-lg shadow-brand-500/20 ring-2 ring-white/10"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 items-center justify-center text-white text-xl hidden shadow-lg shadow-brand-500/30">
+                        🍽️
+                    </div>
+                    <div>
+                        <h1
+                            class="text-white font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+                            FoodBridge</h1>
+                        <p class="text-slate-400 text-[11px] tracking-wide uppercase">Zero Waste Platform</p>
+                    </div>
+                    <button id="sidebarClose"
+                        class="md:hidden ml-auto text-slate-400 hover:text-white text-xl">&times;</button>
+                </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto px-3 mt-4 space-y-2">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] px-3 mb-2">Workspace</p>
+                <a href="#" data-page="dashboard" data-role="all"
+                    class="nav-link active group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                    <span
+                        class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-brand-500 group-[.active]:shadow-lg group-[.active]:shadow-brand-500/30 flex items-center justify-center text-base transition-colors duration-300">📊</span>
+                    <span class="text-slate-300 group-[.active]:text-white">Dashboard</span>
+                </a>
+                <a href="#" data-page="profile" data-role="all"
+                    class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                    <span
+                        class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-brand-500 group-[.active]:shadow-lg group-[.active]:shadow-brand-500/30 flex items-center justify-center text-base transition-colors duration-300">👤</span>
+                    <span class="text-slate-300 group-[.active]:text-white">Profile & History</span>
+                </a>
+
+                <div data-role-section="restaurant" class="hidden">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] px-3 mb-2 mt-8">Restaurant
+                        Portal</p>
+                    <a href="#" data-page="add-listing"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-brand-500 group-[.active]:shadow-lg group-[.active]:shadow-brand-500/30 flex items-center justify-center text-base transition-colors duration-300">➕</span>
+                        <span class="text-slate-300 group-[.active]:text-white">Add Listing</span>
+                    </a>
+                    <a href="#" data-page="food-listings"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-brand-500 group-[.active]:shadow-lg group-[.active]:shadow-brand-500/30 flex items-center justify-center text-base transition-colors duration-300">📋</span>
+                        <span class="text-slate-300 group-[.active]:text-white">My Listings</span>
+                    </a>
+                </div>
+
+                <div data-role-section="ngo" class="hidden">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] px-3 mb-2 mt-8">NGO Portal
+                    </p>
+                    <a href="#" data-page="browse-food"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-brand-500 group-[.active]:shadow-lg group-[.active]:shadow-brand-500/30 flex items-center justify-center text-base transition-colors duration-300">🔍</span>
+                        <span class="text-slate-300 group-[.active]:text-white">Browse Food</span>
+                    </a>
+                    <a href="#" data-page="request-mgmt"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-warning-500 group-[.active]:shadow-lg group-[.active]:shadow-amber-500/30 flex items-center justify-center text-base transition-colors duration-300">📝</span>
+                        <span class="text-slate-300 group-[.active]:text-white">My Requests</span>
+                    </a>
+                    <a href="#" data-page="delivery-tracker"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-blue-500 group-[.active]:shadow-lg group-[.active]:shadow-blue-500/30 flex items-center justify-center text-base transition-colors duration-300">🚚</span>
+                        <span class="text-slate-300 group-[.active]:text-white">My Deliveries</span>
+                    </a>
+                </div>
+
+                <div data-role-section="admin" class="hidden">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[1.5px] px-3 mb-2 mt-8">
+                        Administration</p>
+                    <a href="#" data-page="request-mgmt"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-warning-500 group-[.active]:shadow-lg group-[.active]:shadow-amber-500/30 flex items-center justify-center text-base transition-colors duration-300">📝</span>
+                        <span class="text-slate-300 group-[.active]:text-white">Requests</span>
+                    </a>
+                    <a href="#" data-page="delivery-tracker"
+                        class="nav-link group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-slate-800">
+                        <span
+                            class="w-9 h-9 rounded-lg bg-slate-800 group-[.active]:bg-blue-500 group-[.active]:shadow-lg group-[.active]:shadow-blue-500/30 flex items-center justify-center text-base transition-colors duration-300">🚚</span>
+                        <span class="text-slate-300 group-[.active]:text-white">Deliveries</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800">
+                <div class="flex items-center gap-3 p-2">
+                    <div id="sidebarUserIcon"
+                        class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
+                        FB</div>
+                    <div class="flex-1 min-w-0">
+                        <p id="sidebarUserName" class="text-white font-semibold text-sm truncate">User Name</p>
+                        <p class="text-slate-500 flex items-center gap-1.5 text-[11px] font-medium"><span
+                                class="w-2 h-2 rounded-full bg-brand-400 shadow-[0_0_8px_theme(colors.brand.400)]"></span>
+                            Online</p>
+                    </div>
+                </div>
+                <button id="logoutBtn"
+                    class="mt-4 w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Log Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- OVERLAY -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-40 hidden md:hidden"></div>
+
+        <!-- MAIN -->
+        <main class="md:ml-[272px] min-h-screen flex flex-col">
+            <!-- TOPBAR -->
+            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+                <div class="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 md:px-8 gap-2 sm:gap-4">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button id="hamburger"
+                            class="md:hidden flex-shrink-0 w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <div class="min-w-0">
+                            <h2 id="pageTitle" class="text-base sm:text-lg font-bold text-gray-900 truncate">Dashboard</h2>
+                            <p id="pageSubtitle" class="text-xs text-gray-400 hidden md:block truncate">Welcome back, Raj's
+                                Kitchen
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                        <span id="topbarRole"
+                            class="hidden sm:inline-flex px-2 sm:px-3 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-full bg-brand-50 text-brand-700 whitespace-nowrap">Restaurant</span>
+                        <div class="relative">
+                            <button id="notifBtn"
+                                class="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition relative"
+                                aria-label="Notifications" aria-expanded="false">
+                                🔔
+                                <span id="notifBadge"
+                                    class="hidden absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">0</span>
+                            </button>
+                            <div id="notifPanel"
+                                class="hidden absolute right-0 mt-2 w-[320px] max-h-[420px] overflow-hidden bg-white border border-gray-100 rounded-2xl shadow-2xl z-50">
+                                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/70">
+                                    <p class="text-sm font-bold text-gray-800">Notifications</p>
+                                    <button id="notifMarkAll" class="text-[11px] font-semibold text-brand-600 hover:text-brand-700 transition">Mark all read</button>
+                                </div>
+                                <div id="notifList" class="max-h-[360px] overflow-y-auto"></div>
+                            </div>
+                        </div>
+                        <div id="topbarUserInitials"
+                            class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-xs">
+                            RK</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ============ PROFILE PAGE ============ -->
+            <section id="page-profile" class="page hidden p-6 md:p-8 space-y-6 animate-fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Profile Card -->
+                    <div
+                        class="bg-white rounded-3xl border border-gray-100 p-8 flex flex-col items-center text-center shadow-lg shadow-gray-200/40 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-brand-500 to-brand-700">
+                        </div>
+                        <button id="editProfileBtn"
+                            class="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-full bg-white/95 text-brand-700 text-xs font-bold shadow-md hover:bg-white transition">
+                            Edit Profile
+                        </button>
+                        <div
+                            class="w-24 h-24 rounded-full bg-white flex items-center justify-center text-4xl mb-4 shadow-xl relative z-10 p-2 border-4 border-white">
+                            <div class="w-full h-full rounded-full bg-brand-50 flex items-center justify-center">👤
+                            </div>
+                        </div>
+                        <h3 id="profName" class="text-2xl font-extrabold text-gray-900 relative z-10">User Name</h3>
+                        <span id="profRoleBadge"
+                            class="mt-2 text-xs font-bold px-3 py-1 bg-brand-50 text-brand-700 rounded-full uppercase tracking-wider relative z-10">Role</span>
+
+                        <div class="w-full space-y-5 text-left border-t border-gray-50 pt-8 mt-6">
+                            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl">
+                                <span
+                                    class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-gray-400">✉️</span>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Email
+                                        Address</p>
+                                    <p id="profEmail" class="text-sm font-bold text-gray-800">email@example.com</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl">
+                                <span
+                                    class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-gray-400">📍</span>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Location</p>
+                                    <p id="profLocation" class="text-sm font-bold text-gray-800">City</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl">
+                                <span
+                                    class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-gray-400">📞</span>
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Contact
+                                        Number</p>
+                                    <p id="profContact" class="text-sm font-bold text-gray-800">+00 000000000</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Timeline -->
+                    <div
+                        class="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-8 shadow-lg shadow-gray-200/40">
+                        <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                            <div>
+                                <h3 class="font-extrabold text-2xl text-gray-900">Activity History</h3>
+                                <p class="text-sm text-gray-400 mt-1">Your recent interactions on FoodBridge</p>
+                            </div>
+                            <span
+                                class="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center text-xl">📜</span>
+                        </div>
+
+                        <div id="profHistoryContainer"
+                            class="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-brand-200 before:to-transparent">
+                            <p class="text-gray-400 text-center text-sm py-10 w-full animate-pulse">Fetching history
+                                from server...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ EDIT PROFILE MODAL ============ -->
+            <div id="profileModal" role="dialog" aria-modal="true" aria-hidden="true"
+                class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+                <div id="profileModalInner"
+                    class="w-full max-w-lg rounded-3xl bg-white shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <div>
+                            <h3 class="text-xl font-extrabold text-gray-900">Edit Profile</h3>
+                            <p class="text-sm text-gray-500 mt-1">Update your account details</p>
+                        </div>
+                        <button id="closeProfileModal"
+                            class="w-9 h-9 rounded-full bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition text-lg leading-none">&times;</button>
+                    </div>
+                    <form id="profileEditForm" class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Name</label>
+                            <input id="editProfileName" type="text" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
+                            <input id="editProfileEmail" type="email" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                                    <span>Location</span>
+                                    <button type="button" onclick="openLocationPicker('edit')" class="text-brand-500 hover:text-brand-600 text-[10px] font-bold flex items-center gap-1">📍 Pick on Map</button>
+                                </label>
+                                <input id="editProfileLocation" type="text" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                                <input type="hidden" id="editLat">
+                                <input type="hidden" id="editLon">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Contact</label>
+                                <input id="editProfileContact" type="text" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-3 pt-2">
+                            <button type="button" id="cancelProfileEdit"
+                                class="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold hover:bg-gray-200 transition">Cancel</button>
+                            <button type="submit" id="saveProfileBtn"
+                                class="px-5 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ============ DASHBOARD ============ -->
+            <section id="page-dashboard" class="page active p-8 md:p-12 animate-fade-in relative min-h-screen">
+
+                <!-- Premium Mesh Background Effects -->
+                <div class="fixed inset-0 bg-slate-50 z-[-2]"></div>
+                <div
+                    class="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-brand-400/20 rounded-full mix-blend-multiply filter blur-[100px] opacity-70 animate-[blob_7s_infinite] pointer-events-none z-[-1]">
+                </div>
+                <div
+                    class="fixed top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-blue-400/20 rounded-full mix-blend-multiply filter blur-[100px] opacity-70 animate-[blob_7s_infinite_2s] pointer-events-none z-[-1]">
+                </div>
+                <div
+                    class="fixed bottom-[-10%] left-[20%] w-[45vw] h-[45vw] bg-amber-400/20 rounded-full mix-blend-multiply filter blur-[100px] opacity-70 animate-[blob_7s_infinite_4s] pointer-events-none z-[-1]">
+                </div>
+
+                <div class="relative z-10 space-y-10">
+                    <!-- Dynamic Welcome Header -->
+                    <div
+                        class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-gray-200">
+                        <div>
+                            <h2 class="text-4xl font-extrabold text-gray-900 tracking-tight" id="dashWelcomeTitle">
+                                Welcome
+                                Back</h2>
+                            <p class="text-lg text-gray-500 mt-2" id="dashWelcomeSub">Here's your impact overview for
+                                today.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Stats (Dynamic Based on Role) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6" id="dashboardStatsGrid">
+                        <!-- Stats will be populated via app.js depending on role -->
+                    </div>
+
+                    <!-- Map Section - View Nearby Restaurants & NGOs -->
+                    <div class="bg-white/70 backdrop-blur-3xl rounded-3xl border border-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-500">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">📍 Location Map</h3>
+                                <p class="text-sm text-gray-500 mt-1">Find nearby restaurants and NGOs</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="filterRestaurants" class="px-4 py-2 rounded-lg bg-brand-50 text-brand-600 font-semibold text-sm hover:bg-brand-100 transition" data-type="restaurants">🍲 Restaurants</button>
+                                <button id="filterNGOs" class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 font-semibold text-sm hover:bg-blue-100 transition" data-type="ngos">🤝 NGOs</button>
+                                <button id="filterAll" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 font-semibold text-sm hover:bg-slate-200 transition" data-type="all">📍 All</button>
+                            </div>
+                        </div>
+                        <div id="foodbridgeMap" class="w-full mb-4"></div>
+                        <div id="mapStats" class="grid grid-cols-3 gap-4 text-center">
+                            <div class="p-3 bg-brand-50 rounded-lg">
+                                <p class="text-sm font-semibold text-brand-700">Nearby Restaurants: <span id="stat-restaurants" class="text-lg font-bold">0</span></p>
+                            </div>
+                            <div class="p-3 bg-blue-50 rounded-lg">
+                                <p class="text-sm font-semibold text-blue-700">Nearby NGOs: <span id="stat-ngos" class="text-lg font-bold">0</span></p>
+                            </div>
+                            <div class="p-3 bg-amber-50 rounded-lg">
+                                <p class="text-sm font-semibold text-amber-700">Avg Distance: <span id="stat-distance" class="text-lg font-bold">—</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity + Quick Actions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                        <!-- Activity Feed -->
+                        <div
+                            class="lg:col-span-3 bg-white/70 backdrop-blur-3xl rounded-3xl border border-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-500">
+                            <div class="flex items-center justify-between mb-8">
+                                <h3
+                                    class="text-xl font-bold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                                    Recent Activity</h3>
+                                <button
+                                    class="text-sm font-semibold text-brand-600 hover:text-brand-700 transition">View
+                                    All →</button>
+                            </div>
+                            <div class="space-y-6" id="dashboardActivityFeed">
+                                <!-- Activities -->
+                                <div class="flex items-start gap-6 animate-slide-right min-h-[60px] group"
+                                    style="animation-delay:.05s">
+                                    <div
+                                        class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100/50 flex items-center justify-center text-brand-500 text-xl shadow-inner border border-white group-hover:scale-110 transition-transform duration-300">
+                                        🍱</div>
+                                    <div class="flex-1 min-w-0 pt-1">
+                                        <p class="text-base text-gray-800 leading-snug"><span
+                                                class="font-extrabold text-gray-900">Biryani (5 kg)</span> listed</p>
+                                        <p class="text-sm text-gray-400 mt-1 font-medium">2 minutes ago</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-6 animate-slide-right min-h-[60px] group"
+                                    style="animation-delay:.1s">
+                                    <div
+                                        class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/50 flex items-center justify-center text-amber-500 text-xl shadow-inner border border-white group-hover:scale-110 transition-transform duration-300">
+                                        🤝</div>
+                                    <div class="flex-1 min-w-0 pt-1">
+                                        <p class="text-base text-gray-800 leading-snug"><span
+                                                class="font-extrabold text-gray-900">Hope Foundation</span> requested
+                                            Bread Rolls</p>
+                                        <p class="text-sm text-gray-400 mt-1 font-medium">18 minutes ago</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-6 animate-slide-right min-h-[60px] group"
+                                    style="animation-delay:.15s">
+                                    <div
+                                        class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50 flex items-center justify-center text-blue-500 text-xl shadow-inner border border-white group-hover:scale-110 transition-transform duration-300">
+                                        🚚</div>
+                                    <div class="flex-1 min-w-0 pt-1">
+                                        <p class="text-base text-gray-800 leading-snug"><span
+                                                class="font-extrabold text-gray-900">Dal Makhani (3 kg)</span> in
+                                            transit to Feed India</p>
+                                        <p class="text-sm text-gray-400 mt-1 font-medium">45 minutes ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div
+                            class="lg:col-span-2 bg-white/70 backdrop-blur-3xl rounded-3xl border border-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-500">
+                            <h3
+                                class="text-xl font-bold text-gray-900 mb-8 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+                                Quick Actions</h3>
+                            <div class="space-y-4" id="dashboardQuickActions">
+                                <!-- Quick actions populated by app.js based on role -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ ADD FOOD LISTING ============ -->
+            <section id="page-add-listing" class="page hidden p-6 md:p-8 animate-fade-in">
+                <div class="max-w-2xl">
+                    <div class="bg-white rounded-2xl border border-gray-100 p-8 md:p-10">
+                        <div class="mb-8">
+                            <h3 class="text-xl font-extrabold text-gray-900">Add Food Listing</h3>
+                            <p class="text-sm text-gray-400 mt-1">Post surplus food for NGOs to claim</p>
+                        </div>
+                        <form id="addFoodForm" class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Food Name</label>
+                                <input type="text" id="foodName" placeholder="e.g. Vegetable Biryani" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Quantity</label>
+                                    <input type="number" id="foodQty" placeholder="e.g. 10" min="1" required
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Unit</label>
+                                    <select id="foodUnit"
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+                                        <option value="kg">kg</option>
+                                        <option value="portions">Portions</option>
+                                        <option value="items">Items</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Pickup By Date & Time</label>
+                                <input type="datetime-local" id="foodExpiry" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                                <div id="categoryChips" class="flex flex-wrap gap-2">
+                                    <button type="button" data-value="cooked"
+                                        class="chip px-4 py-2.5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-400 hover:text-brand-600 transition selected">🍛
+                                        Cooked Meal</button>
+                                    <button type="button" data-value="raw"
+                                        class="chip px-4 py-2.5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-400 hover:text-brand-600 transition">🥦
+                                        Raw Produce</button>
+                                    <button type="button" data-value="bakery"
+                                        class="chip px-4 py-2.5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-400 hover:text-brand-600 transition">🍞
+                                        Bakery</button>
+                                    <button type="button" data-value="beverage"
+                                        class="chip px-4 py-2.5 rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-brand-400 hover:text-brand-600 transition">🥤
+                                        Beverage</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Notes <span
+                                        class="font-normal text-gray-400">(optional)</span></label>
+                                <textarea id="foodNotes" rows="3" placeholder="Storage instructions or special notes…"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition resize-none"></textarea>
+                            </div>
+                            <button type="submit"
+                                class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-bold text-sm hover:shadow-lg hover:shadow-brand-500/25 active:scale-[.98] transition-all duration-200">Post
+                                Listing →</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ BROWSE FOOD (NGO) ============ -->
+            <section id="page-browse-food" class="page hidden p-6 md:p-8 animate-fade-in">
+                <!-- Filters -->
+                <div class="mb-8 p-6 bg-white rounded-2xl border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">🔍 Search & Filter</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div class="relative">
+                            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input id="browseSearch" type="text" placeholder="Search food…"
+                                class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                        </div>
+                        <input id="locationFilter" type="text" placeholder="Location…"
+                            class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" />
+                        <select id="categoryFilter"
+                            class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+                            <option value="">All Categories</option>
+                        </select>
+                        <select id="sortFilter"
+                            class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+                            <option value="newest">Newest First</option>
+                            <option value="expiry_asc">Expires Soonest</option>
+                        </select>
+                        <button id="resetFiltersBtn"
+                            class="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition">
+                            Reset Filters
+                        </button>
+                    </div>
+                </div>
+                <!-- Results -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5" id="foodGrid">
+                    <!-- JS will populate -->
+                </div>
+            </section>
+
+            <!-- ============ REQUEST MANAGEMENT (Admin) ============ -->
+            <section id="page-request-mgmt" class="page hidden p-6 md:p-8 animate-fade-in">
+                <div id="requestTabs" class="flex gap-1 mb-6 border-b border-gray-100 overflow-x-auto">
+                    <button data-tab="all"
+                        class="tab active px-5 py-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap">All
+                        <span
+                            class="ml-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full tab-count">8</span></button>
+                    <button data-tab="pending"
+                        class="tab px-5 py-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap">Pending
+                        <span
+                            class="ml-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full tab-count">3</span></button>
+                    <button data-tab="approved"
+                        class="tab px-5 py-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap">Approved
+                        <span
+                            class="ml-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full tab-count">3</span></button>
+                    <button data-tab="rejected"
+                        class="tab px-5 py-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap">Rejected
+                        <span
+                            class="ml-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full tab-count">2</span></button>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full" id="requestTable">
+                            <thead>
+                                <tr class="bg-gray-50/80">
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Request ID</th>
+                                    <th id="requestCounterpartyHeading"
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        NGO Name</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Food Item</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Quantity</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Time</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Status</th>
+                                    <th id="requestActionsHeading"
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ DELIVERY TRACKER ============ -->
+            <section id="page-delivery-tracker" class="page hidden p-6 md:p-8 animate-fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5" id="deliveryGrid"></div>
+            </section>
+
+            <!-- ============ FOOD LISTINGS TABLE ============ -->
+            <section id="page-food-listings" class="page hidden p-6 md:p-8 animate-fade-in">
+                <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <h3 class="font-bold text-gray-900">My Food Listings</h3>
+                        <button data-goto="add-listing"
+                            class="goto-btn px-4 py-2 rounded-xl bg-brand-500 text-white text-sm font-semibold hover:bg-brand-600 active:scale-95 transition-all">+
+                            Add New</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full" id="listingsTable">
+                            <thead>
+                                <tr class="bg-gray-50/80">
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Food Name</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Quantity</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Pickup By</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Status</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Requested By</th>
+                                    <th
+                                        class="text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 px-6 py-4">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listingsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast -->
+        <div id="toast"
+            class="fixed bottom-6 right-6 flex items-center gap-3 px-5 py-3.5 bg-gray-900 text-white rounded-xl shadow-2xl text-sm font-medium translate-y-20 opacity-0 transition-all duration-300 z-[200]">
+            <span class="text-brand-400 text-lg">✓</span>
+            <span id="toastMsg">Done</span>
+        </div>
+
+        <!-- Location Picker Modal -->
+        <div id="locationPickerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800">Pinpoint Your Location</h3>
+                    <button id="closeLocationPicker" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+                </div>
+                <div class="p-2 bg-blue-50 text-xs text-blue-600 text-center font-medium">Drag the map to place the pin on your exact location.</div>
+                <div class="relative w-full h-[350px]">
+                    <div id="pickerMap" class="w-full h-full z-0"></div>
+                    <!-- Fixed Center Pin -->
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[10] pointer-events-none drop-shadow-md">
+                        <span class="text-4xl filter drop-shadow-lg" style="margin-top: 10px; display: block;">📍</span>
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50">
+                    <div class="text-xs text-gray-500 truncate pr-4 max-w-[60%]" id="pickerAddressText">Move map to detect address...</div>
+                    <button id="confirmLocationBtn" class="px-5 py-2.5 bg-brand-500 text-white text-sm font-bold rounded-xl hover:bg-brand-600 active:scale-95 transition shadow-lg shadow-brand-500/30 whitespace-nowrap">Confirm Location</button>
+                </div>
+            </div>
+        </div>
+
+        <script src="app.js"></script>
+</body>
+
+</html>
