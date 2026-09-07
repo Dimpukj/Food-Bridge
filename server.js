@@ -1,11 +1,11 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 require('dotenv').config();
+const db = require('./db');
 const emailService = require('./emailService');
 const geolocationService = require('./geolocationService');
 
@@ -17,39 +17,30 @@ app.use(express.static(__dirname)); // Serve static files like index.html and im
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_foodbridge_key_2026';
 
-// Keep database awake on free tier
-setInterval(async () => {
-    try {
-        const conn = await pool.getConnection();
-        await conn.query('SELECT 1');
-        conn.release();
-        console.log('✓ Keep-alive ping successful');
-    } catch (err) {
-        console.warn('⚠ Keep-alive ping failed:', err.message);
-    }
-}, 4 * 60 * 1000); // Every 4 minutes (before the 30-min timeout)
+// Alias db as pool for backward compatibility across all route handlers
+const pool = db;
 
-console.log('Environment variables loaded:');
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '***' : 'NOT SET');
-console.log('DB_NAME:', process.env.DB_NAME);
-console.log('DB_PORT:', process.env.DB_PORT);
+// Keep database awake on free tier (only when not running on serverless Vercel)
+if (!process.env.VERCEL) {
+    setInterval(async () => {
+        try {
+            const conn = await pool.getConnection();
+            await conn.query('SELECT 1');
+            if (typeof conn.release === 'function') conn.release();
+            console.log('✓ Keep-alive ping successful');
+        } catch (err) {
+            console.warn('⚠ Keep-alive ping failed:', err.message);
+        }
+    }, 4 * 60 * 1000); // Every 4 minutes
+}
 
-// Create MySQL connection pool
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'foodbridge',
-    port: process.env.DB_PORT || 3306,
-    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost'
-        ? { rejectUnauthorized: false }
-        : false,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+console.log('Environment configuration loaded:');
+if (db.isPostgres) {
+    console.log('Using Supabase / PostgreSQL database connection');
+} else {
+    console.log('DB_HOST:', process.env.DB_HOST);
+    console.log('DB_NAME:', process.env.DB_NAME);
+}
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {

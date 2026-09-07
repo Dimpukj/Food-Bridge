@@ -50,15 +50,16 @@ To create a transparent, efficient, and scalable food distribution network that:
 - **Environment Config**: dotenv v17.4.2 (environment variable management)
 
 ### Database
-- **DBMS**: MySQL (relational database)
-- **Architecture**: Connection pooling for performance optimization
-- **SSL Support**: Encrypted connections for remote/cloud databases
-- **Keep-Alive**: Automatic ping mechanism to prevent connection timeouts on free tier
+- **DBMS**: Supabase PostgreSQL (Recommended) & MySQL
+- **Schema**: Auto-indexing, Row Level Security (RLS), PL/pgSQL Audit Triggers
+- **Architecture**: Connection pooling optimized for serverless functions
+- **SSL Support**: Encrypted connections for cloud databases
 
 ### Deployment
 - **Platform**: Vercel (serverless functions)
+- **Database**: Supabase PostgreSQL Cloud
 - **API Handler**: `/api/index.js` exports Express app as Vercel handler
-- **Static Files**: Served from project root
+- **Setup Guide**: See [SUPABASE_VERCEL_SETUP.md](file:///c:/Users/dimpu/OneDrive/Desktop/Foodbridge/SUPABASE_VERCEL_SETUP.md) for full deployment instructions.
 - **Port**: 3000 (development), environment-configurable for production
 
 ### Quality & Accessibility
