@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const path = require('path');
 require('dotenv').config();
 const db = require('./db');
+const { initDatabase } = require('./initDb');
 const emailService = require('./emailService');
 const geolocationService = require('./geolocationService');
 
@@ -13,6 +14,18 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname)); // Serve static files like index.html and images
+
+// Middleware to ensure DB tables exist before handling API requests
+app.use(async (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        try {
+            await initDatabase();
+        } catch (err) {
+            console.warn('DB init warning:', err.message);
+        }
+    }
+    next();
+});
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret_foodbridge_key_2026';
