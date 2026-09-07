@@ -1222,9 +1222,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Auth Modal
   const openAuthModal = () => {
-    console.log('Opening auth modal...', { authModal, authModalInner });
     const modal = $('authModal');
     const modalInner = $('authModalInner');
+    console.log('Opening auth modal...', { modal, modalInner });
     
     if (!modal || !modalInner) {
       console.error('Auth modal elements not found!');
@@ -1452,10 +1452,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Buttons that open the modal instead of instantly entering dashboard
-  $('enterDashboardBtn')?.addEventListener('click', openAuthModal);
-  $('heroDashboardBtn')?.addEventListener('click', openAuthModal);
-  $('ctaDashboardBtn')?.addEventListener('click', openAuthModal);
+  // Buttons that open the auth modal or seamlessly enter dashboard
+  const handleEnterDashboardClick = (e) => {
+    if (e) e.preventDefault();
+    const token = localStorage.getItem('foodbridge_token');
+    const user = getStoredUser();
+    if (token && user?.role) {
+      showDashboardApp();
+      updateIdentityUI(user.name);
+      const tr = $('topbarRole');
+      if (tr) tr.textContent = user.role;
+      setupRoleBasedUI(user.role);
+      loadProfile();
+      startNotificationPolling();
+      startDashboardRealtime();
+    } else {
+      openAuthModal();
+    }
+  };
+
+  $('enterDashboardBtn')?.addEventListener('click', handleEnterDashboardClick);
+  $('heroDashboardBtn')?.addEventListener('click', handleEnterDashboardClick);
+  $('ctaDashboardBtn')?.addEventListener('click', handleEnterDashboardClick);
 
   // ─── LOGOUT ───
   $('logoutBtn')?.addEventListener('click', () => {

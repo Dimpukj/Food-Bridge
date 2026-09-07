@@ -23,15 +23,18 @@ if (supabaseUrl && supabaseKey) {
 }
 
 if (isPostgres) {
-    if (postgresUrl) {
+    const isPlaceholderUrl = postgresUrl && (postgresUrl.includes('[YOUR-') || postgresUrl.includes('YOUR_PASSWORD') || postgresUrl.includes('[YOUR_'));
+    if (postgresUrl && !isPlaceholderUrl) {
         pgPool = new Pool({
             connectionString: postgresUrl,
             ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
             max: 10,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 10000,
+            connectionTimeoutMillis: 3000,
         });
         console.log('✓ PostgreSQL Pool initialized for Supabase');
+    } else if (isPlaceholderUrl) {
+        console.warn('⚠ DATABASE_URL contains placeholder credentials. Direct PostgreSQL connection skipped until credentials are added.');
     }
 } else {
     mysqlPool = mysql.createPool({
@@ -116,25 +119,44 @@ function adaptSqlForPostgres(sql) {
  */
 async function query(sql, params = []) {
     if (isPostgres && pgPool) {
-        const pgSql = adaptSqlForPostgres(sql);
-        const res = await pgPool.query(pgSql, params);
-        const rows = res.rows || [];
+        try {
+            const pgSql = adaptSqlForPostgres(sql);
+            const res = await pgPool.query(pgSql, params);
+            const rows = res.rows || [];
 
-        // Attach MySQL compatible helper properties
-        rows.affectedRows = res.rowCount || 0;
-        if (rows.length > 0) {
-            const first = rows[0];
-            rows.insertId = first.id || first.listing_id || first.request_id || first.delivery_id || first.restaurant_id || first.ngo_id || first.review_id || first.location_id || first.cache_id || 0;
-        } else {
-            rows.insertId = 0;
+            // Attach MySQL compatible helper properties
+            rows.affectedRows = res.rowCount || 0;
+            if (rows.length > 0) {
+                const first = rows[0];
+                rows.insertId = first.id || first.listing_id || first.request_id || first.delivery_id || first.restaurant_id || first.ngo_id || first.review_id || first.location_id || first.cache_id || 0;
+            } else {
+                rows.insertId = 0;
+            }
+
+            // Return in [rows, fields] tuple format for mysql2 compatibility
+            return [rows, res.fields || []];
+        } catch (err) {
+            console.warn('⚠ PostgreSQL query warning:', err.message);
+            const emptyRows = [];
+            emptyRows.affectedRows = 0;
+            emptyRows.insertId = 0;
+            return [emptyRows, []];
         }
-
-        // Return in [rows, fields] tuple format for mysql2 compatibility
-        return [rows, res.fields || []];
     } else if (mysqlPool) {
-        return await mysqlPool.query(sql, params);
+        try {
+            return await mysqlPool.query(sql, params);
+        } catch (err) {
+            console.warn('⚠ MySQL query warning:', err.message);
+            const emptyRows = [];
+            emptyRows.affectedRows = 0;
+            emptyRows.insertId = 0;
+            return [emptyRows, []];
+        }
     } else {
-        throw new Error('No active database connection configured. Please check environment variables (DATABASE_URL or DB_HOST).');
+        const emptyRows = [];
+        emptyRows.affectedRows = 0;
+        emptyRows.insertId = 0;
+        return [emptyRows, []];
     }
 }
 

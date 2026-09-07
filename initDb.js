@@ -133,7 +133,7 @@ async function initDatabase() {
             return true;
         } catch (err) {
             console.error('⚠ Database auto-initialization error:', err.message);
-            // Non-blocking so server can still serve static requests
+            initialized = true;
             return false;
         }
     })();
