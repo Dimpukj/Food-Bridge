@@ -15,9 +15,20 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname)); // Serve static files like index.html and images
 
+// Normalize URL paths for Vercel Serverless Functions
+app.use((req, res, next) => {
+    if (req.url.includes('/api/index.js')) {
+        req.url = req.url.replace('/api/index.js', '/api');
+    }
+    if (!req.url.startsWith('/api') && !req.url.includes('.') && req.url !== '/') {
+        req.url = '/api' + (req.url.startsWith('/') ? '' : '/') + req.url;
+    }
+    next();
+});
+
 // Middleware to ensure DB tables exist before handling API requests
 app.use(async (req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.url.startsWith('/api')) {
         try {
             await initDatabase();
         } catch (err) {
